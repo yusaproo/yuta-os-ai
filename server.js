@@ -1,3 +1,4 @@
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -11,7 +12,7 @@ const PORT = process.env.PORT || 10000;
 const apiKey = process.env.OPENAI_API_KEY;
 
 app.get("/", (req, res) => {
-  res.send("YUTA OS AI sunucusu çalışıyor!");
+  res.send("YUTA OS AI sunucusu çalışıyor! 💜");
 });
 
 app.get("/api/health", (req, res) => {
@@ -29,11 +30,32 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const message = req.body?.message;
+    const body = req.body || {};
+    let message = "";
 
-    if (typeof message !== "string" || !message.trim()) {
+    if (typeof body.message === "string") {
+      message = body.message;
+    } else if (typeof body.text === "string") {
+      message = body.text;
+    } else if (typeof body.prompt === "string") {
+      message = body.prompt;
+    } else if (Array.isArray(body.messages)) {
+      const lastUserMessage = [...body.messages]
+        .reverse()
+        .find(item =>
+          item &&
+          item.role === "user" &&
+          typeof item.content === "string"
+        );
+
+      if (lastUserMessage) {
+        message = lastUserMessage.content;
+      }
+    }
+
+    if (!message.trim()) {
       return res.status(400).json({
-        error: "Bir mesaj yazmalısın."
+        error: "Mesaj bulunamadı. message, text veya prompt alanı gönder."
       });
     }
 
@@ -44,7 +66,10 @@ app.post("/api/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Sen YUTA AI'sın. Türkçe konuşan, yardımcı ve güvenli bir asistansın."
+          content:
+            "Sen YUTA AI'sın. Türkçe konuşan, yardımcı, " +
+            "samimi ve güvenli bir yapay zekâ asistanısın. " +
+            "Kullanıcının sorularına açık ve anlaşılır cevap ver."
         },
         {
           role: "user",
@@ -53,13 +78,16 @@ app.post("/api/chat", async (req, res) => {
       ]
     });
 
-    res.json({
-      reply: response.choices[0]?.message?.content || "Yanıt oluşturulamadı."
-    });
+    const reply =
+      response.choices?.[0]?.message?.content ||
+      "Üzgünüm, şu anda yanıt oluşturamadım.";
+
+    return res.json({ reply });
   } catch (error) {
     console.error("YUTA AI hatası:", error.message);
-    res.status(500).json({
-      error: "Yapay zekâ yanıt veremedi. Sunucu ayarlarını kontrol et."
+
+    return res.status(500).json({
+      error: "Yapay zekâ yanıt veremedi. Sunucu kayıtlarını kontrol et."
     });
   }
 });
