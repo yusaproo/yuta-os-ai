@@ -59,7 +59,11 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({
+      apiKey,
+      timeout: 30000,
+      maxRetries: 1
+    });
 
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -84,10 +88,16 @@ app.post("/api/chat", async (req, res) => {
 
     return res.json({ reply });
   } catch (error) {
-    console.error("YUTA AI hatası:", error.message);
+    console.error("YUTA AI hata ayrıntısı:", {
+      name: error.name,
+      message: error.message,
+      status: error.status,
+      code: error.code
+    });
 
     return res.status(500).json({
-      error: "Yapay zekâ yanıt veremedi. Sunucu kayıtlarını kontrol et."
+      error: "Yapay zekâ isteği başarısız oldu.",
+      details: error.message || "Bilinmeyen hata"
     });
   }
 });
